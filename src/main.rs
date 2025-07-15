@@ -39,21 +39,19 @@ enum Commands {
 
 #[tokio::main]
 async fn main() {
-    // Ładuj konfigurację
     let config_path = dirs::config_dir()
-        .unwrap()
-        .join("zenit")
-        .join("config.toml");
+    .unwrap()
+    .join("zenit")
+    .join("config.toml");
     let config = if Path::new(&config_path).exists() {
         Config::load(&config_path).unwrap_or_else(|e| {
-            eprintln!("{}", format!("⚠️ Błąd ładowania konfiguracji: {}", e).yellow());
+            eprintln!("{}", format!("Błąd ładowania konfiguracji: {}", e).yellow());
             Config::default()
         })
     } else {
         Config::default()
     };
 
-    // Wyświetl baner powitalny
     print_banner();
 
     let cli = Cli::parse();
