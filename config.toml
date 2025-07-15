@@ -1,0 +1,4 @@
+[settings]
+default_manager = "pacman"  # Domyślny menedżer: pacman, yay, flatpak
+confirm = false             # Czy wymagać potwierdzenia (true/false)
+progress_style = "fancy"    # Styl paska postępu: simple, fancy
