@@ -9,9 +9,8 @@ use crate::config::Config;
 pub async fn install(pkg: &str, config: &Config) {
     println!("{}", format!("Instalacja pakietu: {}", pkg).bold().cyan());
 
-    let pb = create_progress_bar(&config.settings.progress_style, "Instalacja");
+    let pb = create_progress_bar(&config.settings.progress_style, String::from("Instalacja"));
 
-    // Symulacja postępu (w praktyce zastąp rzeczywistym procesem)
     for i in 0..=100 {
         pb.set_position(i);
         thread::sleep(Duration::from_millis(30));
@@ -22,32 +21,36 @@ pub async fn install(pkg: &str, config: &Config) {
 
     let status = match manager.as_str() {
         "pacman" => {
-            let pacman_status = TokioCommand::new("sudo")
-                .arg("pacman")
-                .arg("-S")
-                .arg(confirm_flag)
-                .arg(pkg)
-                .status()
-                .await;
+            let pacman_result = TokioCommand::new("sudo")
+            .arg("pacman")
+            .arg("-S")
+            .arg(confirm_flag)
+            .arg(pkg)
+            .status()
+            .await;
 
-            if pacman_status.is_ok() && pacman_status.unwrap().success() {
-                pacman_status
-            } else {
-                println!("{}", "Próba instalacji przez yay...".yellow());
-                TokioCommand::new("yay")
+            if let Ok(pacman_status) = pacman_result {
+                if pacman_status.success() {
+                    Ok(pacman_status)
+                } else {
+                    println!("{}", "Próba instalacji przez yay...".yellow());
+                    TokioCommand::new("yay")
                     .arg("-S")
                     .arg(confirm_flag)
                     .arg(pkg)
                     .status()
                     .await
+                }
+            } else {
+                pacman_result
             }
         }
         "yay" => TokioCommand::new("yay")
-            .arg("-S")
-            .arg(confirm_flag)
-            .arg(pkg)
-            .status()
-            .await,
+        .arg("-S")
+        .arg(confirm_flag)
+        .arg(pkg)
+        .status()
+        .await,
         _ => {
             eprintln!("{}", "Nieobsługiwany menedżer pakietów!".red());
             return;
@@ -69,7 +72,7 @@ pub async fn install(pkg: &str, config: &Config) {
 pub async fn update(config: &Config) {
     println!("{}", "Aktualizacja systemu...".bold().cyan());
 
-    let pb = create_progress_bar(&config.settings.progress_style, "Aktualizacja pacman");
+    let pb = create_progress_bar(&config.settings.progress_style, String::from("Aktualizacja pacman"));
 
     for i in 0..=100 {
         pb.set_position(i);
@@ -79,11 +82,11 @@ pub async fn update(config: &Config) {
     let confirm_flag = if config.settings.confirm { "" } else { "--noconfirm" };
 
     let status = TokioCommand::new("sudo")
-        .arg("pacman")
-        .arg("-Syu")
-        .arg(confirm_flag)
-        .status()
-        .await;
+    .arg("pacman")
+    .arg("-Syu")
+    .arg(confirm_flag)
+    .status()
+    .await;
 
     match status {
         Ok(status) if status.success() => {
@@ -96,14 +99,13 @@ pub async fn update(config: &Config) {
         }
     }
 
-    // Aktualizacja Flatpak
     flatpak_update(config).await;
 }
 
 pub async fn upgrade(config: &Config) {
     println!("{}", "Aktualizacja systemu i AUR...".bold().cyan());
 
-    let pb = create_progress_bar(&config.settings.progress_style, "Aktualizacja yay");
+    let pb = create_progress_bar(&config.settings.progress_style, String::from("Aktualizacja yay"));
 
     for i in 0..=100 {
         pb.set_position(i);
@@ -113,12 +115,12 @@ pub async fn upgrade(config: &Config) {
     let confirm_flag = if config.settings.confirm { "" } else { "--noconfirm" };
 
     let status = TokioCommand::new("yay")
-        .arg("-Syu")
-        .arg("--devel")
-        .arg("--timeupdate")
-        .arg(confirm_flag)
-        .status()
-        .await;
+    .arg("-Syu")
+    .arg("--devel")
+    .arg("--timeupdate")
+    .arg(confirm_flag)
+    .status()
+    .await;
 
     match status {
         Ok(status) if status.success() => {
@@ -133,9 +135,9 @@ pub async fn upgrade(config: &Config) {
 }
 
 pub async fn autoclean(config: &Config) {
-    println!("{}", "🧹 Czyszczenie cache...".bold().cyan());
+    println!("{}", "Czyszczenie cache...".bold().cyan());
 
-    let pb = create_progress_bar(&config.settings.progress_style, "Czyszczenie cache");
+    let pb = create_progress_bar(&config.settings.progress_style, String::from("Czyszczenie cache"));
 
     for i in 0..=100 {
         pb.set_position(i);
@@ -145,17 +147,17 @@ pub async fn autoclean(config: &Config) {
     let confirm_flag = if config.settings.confirm { "" } else { "--noconfirm" };
 
     let pacman_status = TokioCommand::new("sudo")
-        .arg("pacman")
-        .arg("-Sc")
-        .arg(confirm_flag)
-        .status()
-        .await;
+    .arg("pacman")
+    .arg("-Sc")
+    .arg(confirm_flag)
+    .status()
+    .await;
 
     let flatpak_status = TokioCommand::new("flatpak")
-        .arg("uninstall")
-        .arg("--unused")
-        .status()
-        .await;
+    .arg("uninstall")
+    .arg("--unused")
+    .status()
+    .await;
 
     if pacman_status.is_ok() && pacman_status.unwrap().success() && flatpak_status.is_ok() && flatpak_status.unwrap().success() {
         pb.finish_with_message(format!("{}", "Zakończono!".green()));
@@ -167,9 +169,9 @@ pub async fn autoclean(config: &Config) {
 }
 
 pub async fn autoremove(config: &Config) {
-    println!("{}", "🗑 Usuwanie osieroconych pakietów...".bold().cyan());
+    println!("{}", "Usuwanie osieroconych pakietów...".bold().cyan());
 
-    let pb = create_progress_bar(&config.settings.progress_style, "Usuwanie osieroconych");
+    let pb = create_progress_bar(&config.settings.progress_style, String::from("Usuwanie osieroconych"));
 
     for i in 0..=100 {
         pb.set_position(i);
@@ -179,9 +181,9 @@ pub async fn autoremove(config: &Config) {
     let confirm_flag = if config.settings.confirm { "" } else { "--noconfirm" };
 
     let output = Command::new("pacman")
-        .arg("-Qdtq")
-        .output()
-        .expect("Błąd podczas wyszukiwania osieroconych pakietów");
+    .arg("-Qdtq")
+    .output()
+    .expect("Błąd podczas wyszukiwania osieroconych pakietów");
 
     let packages = String::from_utf8_lossy(&output.stdout);
     if packages.is_empty() {
@@ -191,12 +193,12 @@ pub async fn autoremove(config: &Config) {
     }
 
     let status = TokioCommand::new("sudo")
-        .arg("pacman")
-        .arg("-Rns")
-        .arg(confirm_flag)
-        .arg(packages.trim())
-        .status()
-        .await;
+    .arg("pacman")
+    .arg("-Rns")
+    .arg(confirm_flag)
+    .arg(packages.trim())
+    .status()
+    .await;
 
     match status {
         Ok(status) if status.success() => {
@@ -211,9 +213,9 @@ pub async fn autoremove(config: &Config) {
 }
 
 pub async fn flatpak_install(pkg: &str, config: &Config) {
-    println!("{}", format!("📦 Instalacja pakietu Flatpak: {}", pkg).bold().cyan());
+    println!("{}", format!("Instalacja pakietu Flatpak: {}", pkg).bold().cyan());
 
-    let pb = create_progress_bar(&config.settings.progress_style, "Instalacja Flatpak");
+    let pb = create_progress_bar(&config.settings.progress_style, String::from("Instalacja Flatpak"));
 
     for i in 0..=100 {
         pb.set_position(i);
@@ -221,10 +223,10 @@ pub async fn flatpak_install(pkg: &str, config: &Config) {
     }
 
     let status = TokioCommand::new("flatpak")
-        .arg("install")
-        .arg(pkg)
-        .status()
-        .await;
+    .arg("install")
+    .arg(pkg)
+    .status()
+    .await;
 
     match status {
         Ok(status) if status.success() => {
@@ -241,7 +243,7 @@ pub async fn flatpak_install(pkg: &str, config: &Config) {
 pub async fn flatpak_update(config: &Config) {
     println!("{}", "Aktualizacja Flatpak...".bold().cyan());
 
-    let pb = create_progress_bar(&config.settings.progress_style, "Aktualizacja Flatpak");
+    let pb = create_progress_bar(&config.settings.progress_style, String::from("Aktualizacja Flatpak"));
 
     for i in 0..=100 {
         pb.set_position(i);
@@ -249,9 +251,9 @@ pub async fn flatpak_update(config: &Config) {
     }
 
     let status = TokioCommand::new("flatpak")
-        .arg("update")
-        .status()
-        .await;
+    .arg("update")
+    .status()
+    .await;
 
     match status {
         Ok(status) if status.success() => {
@@ -268,9 +270,9 @@ pub async fn flatpak_update(config: &Config) {
 pub fn help() {
     println!("{}", "Pomoc dla Zenit Package Manager".bold().yellow());
     println!("{}", r#"
-        ╔════════════════════════════════════╗
-        ║   Dostępne komendy                 ║
-        ╚════════════════════════════════════╝
+    ╔════════════════════════════════════╗
+    ║   Dostępne komendy                 ║
+    ╚════════════════════════════════════╝
     "#.bold().cyan());
     println!("  {} install <pakiet>         - Instaluje pakiet (pacman/yay/flatpak)", "zenit".bold());
     println!("  {} update                 - Aktualizuje system (pacman i Flatpak)", "zenit".bold());
@@ -284,17 +286,23 @@ pub fn help() {
     println!("{}", "Konfiguracja: ~/.config/zenit/config.toml".italic());
 }
 
-fn create_progress_bar(style: &str, prefix: &str) -> ProgressBar {
+fn create_progress_bar(style: &str, prefix: String) -> ProgressBar {
     let pb = ProgressBar::new(100);
     let template = match style {
-        "simple" => "{prefix:.bold.dim} [{bar:20}] {percent}% {msg}",
-        _ => "{prefix:.bold.dim} [{bar:40.cyan/blue}] {percent}% {msg}",
+        "simple" => {
+            let simple_template = format!("{} [{{bar:20}}] {{percent}}% {{msg}}", prefix);
+            simple_template
+        }
+        _ => {
+            let fancy_template = format!("{} [{{bar:40.cyan/blue}}] {{percent}}% {{msg}}", prefix);
+            fancy_template
+        }
     };
     pb.set_style(
         ProgressStyle::default_bar()
-            .template(template)
-            .unwrap()
-            .progress_chars("=>-"),
+        .template(&template)
+        .unwrap()
+        .progress_chars("=>-"),
     );
     pb.set_prefix(prefix);
     pb
